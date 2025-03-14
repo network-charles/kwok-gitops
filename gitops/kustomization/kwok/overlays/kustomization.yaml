@@ -1,0 +1,18 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+resources:
+  - ../base
+patches:
+  - target:
+      kind: Kustomization
+    patch: |-
+      apiVersion: kustomize.config.k8s.io/v1beta1
+      kind: Kustomization
+      metadata:
+        name: kwok  
+        namespace: kwok
+      resources:
+        - https://github.com/kubernetes-sigs/kwok/kustomize/kwok?ref=v0.5.1
+images:
+  - name: registry.k8s.io/kwok/kwok
+    newTag: "v0.5.1"

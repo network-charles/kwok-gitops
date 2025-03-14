@@ -1,0 +1,11 @@
+apiVersion: kustomize.config.k8s.io/v1beta1
+kind: Kustomization
+metadata:
+  name: kwok-deployment
+  namespace: kwok
+resources:
+  - namespace.yaml
+  - https://github.com/kubernetes-sigs/kwok/kustomize/kwok?ref=v0.6.1
+images:
+  - name: registry.k8s.io/kwok/kwok
+    newTag: "v0.6.1"

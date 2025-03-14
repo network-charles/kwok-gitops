@@ -1,0 +1,15 @@
+apiVersion: kustomize.toolkit.fluxcd.io/v1
+kind: Kustomization
+metadata:
+  name: kwok
+  namespace: flux-system
+spec:
+  interval: 1m
+  targetNamespace: kwok
+  sourceRef:
+    kind: GitRepository
+    name: git
+    namespace: flux-system
+  path: "/gitops/kustomization/kwok/overlays"
+  prune: true
+  timeout: 1m

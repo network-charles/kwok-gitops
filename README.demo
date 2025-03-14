@@ -1,0 +1,81 @@
+# Use GitOps to manage a KWOK deployment
+
+# Create cluster
+kind create cluster --config cluster.yaml
+
+# Install flux controllers
+flux install
+
+# Create secrets for authenticating to the Github repo
+echo -n "hi" | base64
+kubectl apply -f secrets.yaml 
+
+# Connect flux to the github repo 
+kubectl apply -f gitops/flux/git.yaml
+
+# Target the kwok yaml file in the repo file path
+kubectl apply -f gitops/flux/kwok.yaml
+
+# Prepare variables
+# KWOK repository
+KWOK_REPO=kubernetes-sigs/kwok
+# Get latest
+KWOK_LATEST_RELEASE=$(curl "https://api.github.com/repos/${KWOK_REPO}/releases/latest" | jq -r '.tag_name')
+
+# Apply custom resources (CRs) of stages
+kubectl apply -f "https://github.com/${KWOK_REPO}/releases/download/${KWOK_LATEST_RELEASE}/stage-fast.yaml"
+
+# Target the deployment and node yaml file in the repo file path
+kubectl apply -f gitops/flux/others.yaml
+
+# Install prometheus and grafana
+kubectl apply -f gitops/flux/prometheus-grafana.yaml
+
+# Enable Metrics on Kube-Scheduler
+docker exec -it kind-control-plane bash
+apt update
+apt install vim -y
+vi /etc/kubernetes/manifests/kube-scheduler.yaml
+
+spec:
+  containers:
+  - command:
+    - kube-scheduler
+    - --bind-address=0.0.0.0  # Allow listening on all interfaces
+
+# Access prometheus dashboard
+curl localhost:9090
+
+# Access grafana dashboard
+curl localhost:3000
+
+# Grab the grafana username and password
+kubectl get secrets -n monitoring monitoring-prometheus-grafana -o jsonpath='{.data.admin-password}' | base64 --decode ; echo
+kubectl get secrets -n monitoring monitoring-prometheus-grafana -o jsonpath='{.data.admin-user}' | base64 --decode ; echo
+
+# Authenticate to grafana dashboard
+username = admin
+password = prom-operator
+
+# Scale the deployment to 0
+kubectl scale deployment nginx-deployment --replicas 0
+
+# Mofify the number of deployment replicas and node affinity slector value to stress test the scheduler
+replicas: 30
+...
+affinity:
+  nodeAffinity:
+    requiredDuringSchedulingIgnoredDuringExecution:
+      nodeSelectorTerms:
+        - matchExpressions:
+            - key: type
+              operator: In
+              values:
+                - kwokkk 
+...                      
+
+# Query prometheus
+scheduler_pending_pods{queue="unschedulable"}
+
+# Delete cluster
+kind delete cluster
